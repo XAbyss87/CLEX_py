@@ -121,11 +121,26 @@ Comparison operators act as filters:
 | Operator | Behavior                              |
 | -------- | ------------------------------------- |
 | @        | Index access (`v1[v2]`)               |
-| &        | Truthy filter                         |
-| !&       | Falsy filter                          |
 | ^        | Intersection                          |
 | !^       | Difference                            |
 | .        | Startswith check (returns True/False) |
+
+---
+
+## Prefixes
+They are built-in functions that add extra behaviour to your functions and act directly on the result.
+Simply put the Prefix before the function body like so:
+
+~~~python
+"_Prefix_(Function)"
+~~~
+
+The currently supported Prefixes are:
+
+| Prefix | Behaviour|
+|--------|----------|
+| &      | Filter Truthy ('v1[i] if v2[i]')|
+| !&     | Filter Falsy ('v1[i] if not v2[i]')|
 
 ---
 
