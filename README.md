@@ -23,7 +23,7 @@ pip install clex_py
 ## Quick Start
 
 ```python
-from CLEX import expression
+from CLEX.parser import expression
 
 # Compile a pipeline
 add_one = expression("(x + 1:)")
