@@ -160,7 +160,7 @@ result = pipeline(x=[1, 2, 3])
 ```python
 from CLEX import expression
 
-is_even = expression("(x % 2; r) -> (x !& r:)")
+is_even = expression("!&(x % 2:)")
 
 result = is_even(x=[1, 2, 3, 4, 5])
 print(result)  # [2, 4]
