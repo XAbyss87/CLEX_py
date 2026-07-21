@@ -1,230 +1,231 @@
-# CLEX (Chained-Lambda-Expressions)
+# CLEX
 
-**CLEX** is a lightweight, string-based Domain Specific Language (DSL) for building clean, readable functional pipelines in Python.
+CLEX stands for "Chained Lambda Expressions".
 
-If you've ever chained multiple `map`, `filter`, or `zip` calls together, you know how quickly things become unreadable:
+This is a small utility for writing simple data transformation steps as a readable string. It is handy when a chain of operations starts to look more complicated than the actual logic behind it.
+
+> A quick example of the kind of thing this helps with.
+
 
 ```python
-result = list(map(lambda x: x * 2, filter(lambda x: x > 2, data)))
+# plain Python
+result = list(map(lambda r: r * 10, filter(lambda r: r > 3, map(lambda x: x + 1, [1, 2, 3, 4]))))
+print(result)  # [40, 50]
 ```
 
-CLEX replaces this with a **structured, expressive pipeline string** that is easier to read, write, and maintain.
+That gets messy fast. With CLEX, the same idea is a bit easier to read:
+
+```python
+from CLEX.parser import expression
+
+expr = expression("(x + 1; r) -> &(r > 3; r) -> (r * 10; r)")
+print(expr(x=[1, 2, 3, 4]))  # [40, 50]
+```
+
+A typical example looks like this:
+
+```python
+from CLEX.parser import expression
+
+expr = expression("(x + 1:)")
+result = expr(x=[1, 2, 3])
+print(result)  # [2, 3, 4]
+```
+
+You can also run the same expression with the `eval()` method:
+
+```python
+from CLEX.parser import expression
+
+expr = expression("(x + 1:)")
+result = expr.eval(x=[1, 2, 3])
+print(result)  # [2, 3, 4]
+```
 
 ---
 
 ## Installation
 
 ```bash
-pip install clex_py
+pip install clex-py
 ```
 
 ---
 
-## Quick Start
+## How it works
 
-```python
-from CLEX import expression
-
-# Compile a pipeline
-add_one = expression("(x + 1:)")
-
-# Execute it
-result = add_one(x=[1, 2, 3, 4, 5])
-print(result)  # [2, 3, 4, 5, 6]
-```
-
----
-
-## Core Concept
-
-A CLEX pipeline is a **chain of small, single-purpose operations**, written inside a string.
-
-### Function Format
+A CLEX expression is made of one or more steps. Each step is written in a compact form that looks like this:
 
 ```text
-(input operation value; return_variable)
+(input operation value; output_name)
 ```
 
-Shortcut:
+The pieces are:
+
+- `input`: the name of the current input source. In the first step, this is usually one of the keyword arguments you pass when calling the expression.
+- `operation`: the thing to do, such as `+`, `-`, `>`, `@`, or a lambda reference.
+- `value`: the value to use for the operation.
+- `output_name`: the name to store the result under for later steps.
+
+If you do not want to give the result a custom name, you can use the `:` shortcut.
 
 ```text
 (input operation value:)
 ```
 
-→ Automatically assigns the result to the default register `_`
+That stores the result in the default `_` register instead of a named variable. The `_` register can be used in later steps if you want, but the most common use is at the end of a chain where you do not need a dedicated return name.
+
+## Anatomy of a Step
+
+A step is basically a small function description written in one line.
+
+The general shape is:
+
+```text
+(input operation value; output_name)
+```
+
+and the shorthand form is:
+
+```text
+(input operation value:)
+```
+
+Here is what each piece means in practice:
+
+- `input` is the current value source. On the first step, that is usually the name you pass when you call the expression, like `x`. On later steps, it can be the output from the previous step or the `_` register.
+- `operation` is the action to apply. This can be one of the built-in operators, or a lambda-style function reference written in square brackets.
+- `value` is the right-hand operand. It can be a literal, another value, or something that the engine resolves from the current execution context.
+- `output_name` is optional. If you provide one, the result of that step is stored there and can be used in the next step. If you use `:`, the result goes to the default `_` register instead.
+
+The `:` shortcut is mostly useful when you do not need a named intermediate result. It is especially convenient for the last step in a chain, because you can just let the result land in `_` and return it directly.
+
+## Chaining steps
+
+You can chain steps with `->`.
+
+```python
+from CLEX.parser import expression
+
+expr = expression("(x + 1; r) -> (r * 2; r)")
+print(expr(x=[1, 2, 3]))  # [4, 6, 8]
+```
+
+Each step uses the output from the previous one.
 
 ---
 
-## Anatomy of a Function
+## Prefix system
 
-Each function has four parts:
+CLEX also has a small prefix system. Prefixes are built-in helpers that act on the result of an expression step.
 
-1. **Input Iterable (`x`)**
+The two built-in prefixes are:
 
-   * The active dataset
+- `&`: keep the original value when the step result is truthy, equivalent to `v1[i] if v2[i]`
+- `!&`: keep the original value when the step result is falsy, equivalent to `v1[i] if not v2[i]`
 
-2. **Operation**
+Example:
 
-   * The transformation, condition, or function applied
+```python
+from CLEX.parser import expression
 
-3. **Acting Value**
-
-   * A scalar (broadcasted), or another iterable (zipped)
-
-4. **Return Variable**
-
-   * Where the result is stored
+expr = expression("&(x > 0; r)")
+print(expr(x=[-2, 1, 3, -4]))  # [1, 3]
+```
 
 ---
 
-## Execution Model
-
-* Operations run **element-wise**
-* Scalars are automatically **broadcasted**
-* Iterables are **zipped together**
-* Execution stops at the **shortest iterable**
-* The final step’s result is automatically returned
-
----
-
-## Operators
+## Supported operations
 
 ### Arithmetic
 
-| Operator | Behavior                          |
-| -------- | --------------------------------- |
-| +        | Addition                          |
-| -        | Subtraction                       |
-| *        | Multiplication                    |
-| /        | Division (skips division by zero) |
-| %        | Modulus                           |
+| Operator | Meaning |
+| --- | --- |
+| `+` | addition |
+| `-` | subtraction |
+| `*` | multiplication |
+| `/` | division |
+| `%` | modulus |
+
+### Comparison
+
+These operators compare values and return `True` or `False`. They are not filters by themselves; they simply produce boolean results that can be used in a step or with a prefix.
+
+| Operator | Meaning |
+| --- | --- |
+| `==` | equal |
+| `!=` | not equal |
+| `>` | greater than |
+| `<` | less than |
+| `>=` | greater than or equal |
+| `<=` | less than or equal |
+
+### Collection and string operations
+
+| Operator | Meaning |
+| --- | --- |
+| `@` | index access |
+| `^` | set intersection |
+| `!^` | set difference |
+| `.` | startswith-style check |
 
 ---
 
-### Comparison (Filtering)
+## Lambda functions
 
-Comparison operators act as filters:
-
-| Operator | Behavior                 |
-| -------- | ------------------------ |
-| >        | Keep values greater than |
-| <        | Keep values less than    |
-| >=       | Keep values ≥            |
-| <=       | Keep values ≤            |
-| =        | Keep equal values        |
-| !=       | Keep non-equal values    |
-
----
-
-### Advanced Operations
-
-| Operator | Behavior                              |
-| -------- | ------------------------------------- |
-| @        | Index access (`v1[v2]`)               |
-| &        | Truthy filter                         |
-| !&       | Falsy filter                          |
-| ^        | Intersection                          |
-| !^       | Difference                            |
-| .        | Startswith check (returns True/False) |
-
----
-
-## Chaining Pipelines
-
-Use `->` to chain operations:
+You can also use a lambda-style function reference inside a step.
 
 ```python
-pipeline = expression("(x + 1; r) -> (r + 2; r)")
-result = pipeline(x=[1, 2, 3])
+from CLEX.parser import expression
+
+expr = expression("(x [lambda x, y: x + y] 1; r)")
+print(expr(x=[1, 2, 3]))  # [2, 3, 4]
 ```
+
+The lambda should accept two arguments. The first one is the current input element, and the second is the value supplied in the step.
 
 ---
 
-## Example: Filtering Even Numbers
+## Running an expression
+
+There are two common ways to execute a compiled expression:
 
 ```python
-from CLEX import expression
+from CLEX.parser import expression
 
-is_even = expression("(x % 2; r) -> (x !& r:)")
+expr = expression("(x + 1:)")
 
-result = is_even(x=[1, 2, 3, 4, 5])
-print(result)  # [2, 4]
+expr(x=[1, 2, 3])
+expr.eval(x=[1, 2, 3])
 ```
+
+Both forms run the expression with the keyword arguments you provide.
 
 ---
 
-## Custom Lambda Functions
-
-CLEX supports user-defined transformations using square-bracket lambda syntax:
+## A fuller example
 
 ```python
-expr = expression("(x [lambda x, y: x + 1] 1; r)")
+from CLEX.parser import expression
+
+expr = expression("(x + 1; r) -> &(r > 3; r) -> (r * 10; r)")
+print(expr(x=[1, 2, 3, 4]))  # [40, 50]
 ```
-- Note that lambdas are called for each element in an iterable passed as the first parameter with the second being the scalar.
-### Requirements
 
-* Must accept **two parameters**
-* Must return an **iterable**
-* Should produce results compatible with element-wise execution
+That is mostly the same shape as the earlier examples: transform, apply a prefix, then transform again.
 
 ---
 
-## Safety Model
+## Notes on safety
 
-Lambda expressions are executed using Python’s `eval`, but with strict controls:
+Lambda expressions are evaluated through Python's `eval()` machinery. Dunder-style names are blocked by default unless you explicitly allow them, and built-in methods are also disabled by default.
 
-* Built-in functions are **disabled by default**
-* Safe functions can be enabled via a **whitelist**
-* Dunder methods are blocked unless explicitly allowed
+To allow any functions inside a lambda expression, you must explicitly pass them as a dictionary to the `whitelist` argument of `expression`.
 
-This ensures controlled execution of dynamic expressions.
+That means this is fine for ordinary local use, but you should be careful about passing untrusted expressions around.
 
 ---
 
-## Parser & Engine
+## License
 
-CLEX uses a modern parsing system designed for flexibility and performance:
-
-* Built with **Lark**
-* Supports arbitrarily long variable names
-* Optimized execution pipeline
-* Prefix-based result filtering system
-
----
-
-## Design Philosophy
-
-CLEX is built around a few core ideas:
-
-* **Clarity over nesting**
-* **Composable transformations**
-* **Minimal syntax, maximum expressiveness**
-* **Safe execution of dynamic logic**
-
----
-
-## Roadmap
-
-* Port to Java, C#, and JavaScript
-* Expand built-in operations
-* Improve runtime performance and safety
-* Enable deeper integration with Python functions
-
----
-
-## Contributing
-
-Contributions, issues, and suggestions are welcome.
-
----
-
-## Summary
-
-CLEX provides:
-
-* A clean DSL for functional pipelines
-* A readable alternative to nested functional code
-* Safe execution of dynamic expressions
-* Extensible and composable transformations
-
-It’s designed for developers who want **powerful data transformations without sacrificing readability**.
+This project is licensed under the GNU General Public License v3.0.
