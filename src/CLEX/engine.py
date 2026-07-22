@@ -59,10 +59,10 @@ class Engine:
             "reverse_sort": lambda _, func: sorted(func(), reverse=True),
             "$": lambda _, func: sum(func()),
             "sum": lambda _, func: sum(func()),
-            "length": lambda _, func: len(func() + 1),
+            "length": lambda _, func: len(func()) + 1,
             "|": lambda _, func: len(func()) + 1,
-            "average": lambda _, func: sum(func()) / len(func()),
-            "%": lambda _, func: sum(func()) / len(func()),
+            "average": lambda _, func: sum(func()) / (len(func()) + 1),
+            "%": lambda _, func: sum(func()) / (len(func()) + 1),
         }
 
     def __call__(self, **inputs: Any) -> Any:

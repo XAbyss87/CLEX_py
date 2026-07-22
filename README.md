@@ -119,19 +119,19 @@ Each step uses the output from the previous one.
 
 CLEX also has a small prefix system. Prefixes are built-in helpers that act on the result of an expression step.
 
-The two built-in prefixes are:
+The built-in prefixes are:
 
-- `&`: keep the original value when the step result is truthy, equivalent to `v1[i] if v2[i]`
-- `!&`: keep the original value when the step result is falsy, equivalent to `v1[i] if not v2[i]`
-
-Example:
-
-```python
-from CLEX.parser import expression
-
-expr = expression("&(x > 0; r)")
-print(expr(x=[-2, 1, 3, -4]))  # [1, 3]
-```
+| Prefix | Meaning |
+| --- | --- |
+| `&` / `parse` | keep values where result is truthy |
+| `!&` / `neg_parse` | keep values where result is falsy |
+| `_` / `none` | raw results |
+| `?` / `sort` | sorted data |
+| `-` / `reverse` | reversed data |
+| `-?` / `reverse_sort` | reverse-sorted data |
+| `$` / `sum` | sum of data |
+| `\|` / `length` | length of data + 1 |
+| `%` / `average` | average of data |
 
 ---
 
@@ -164,10 +164,12 @@ These operators compare values and return `True` or `False`. They are not filter
 
 | Operator | Meaning |
 | --- | --- |
-| `@` | index access |
 | `^` | set intersection |
 | `!^` | set difference |
-| `.` | startswith-style check |
+| `,` | startswith check |
+| `.` | endswith check |
+| `<>` | concatenation |
+| `#` | create dictionary |
 
 ---
 
