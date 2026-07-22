@@ -18,10 +18,11 @@ operation: OPERATOR | FUNC_REF
 
 STRING: /"[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*'/
 
-prefix: PREFIX?
-PREFIX.2: "!&" | "&"
+prefix: PREFIX_WORD? | PREFIX?
+PREFIX_WORD.2: "reverse_sort" | "reverse" | "sort" | "none" | "parse" | "neg_parse" | "sum" | "length" | "average"
+PREFIX.2: "-?" | "!&" | "&" | "?" | "-" | "$" | "|" | "%"
 
-OPERATOR: "+" | "-" | "*" | "/" | "%" | "==" | "<" | ">" | "<=" | ">=" | "!=" | "^" | "!^" | "."
+OPERATOR: "+" | "-" | "*" | "/" | "%" | "==" | "<>" | "<" | ">" | "<=" | ">=" | "!=" | "^" | "!^" | "," | "!" | "." | "%" | "#"
 
 FUNC_REF: /\[[^\]]+\]/
 
@@ -58,3 +59,7 @@ def expression(expr, allowDunder=False, **whitelist):
     namespace = dict(whitelist.pop("whitelist", {}) or {})
     namespace.update(whitelist)
     return Engine(code, allowDunder=allowDunder, **namespace)
+
+
+sortlist = expression("(x <> y:)")
+print(sortlist(x=[1,2,3,4,5], y=[6,7,8,9,10]))
