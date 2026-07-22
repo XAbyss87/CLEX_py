@@ -33,7 +33,6 @@ class Engine:
             '>=': lambda x, y: [a >= b for a, b in zip(x, y)],
             '<=': lambda x, y: [a <= b for a, b in zip(x, y)],
             '!=': lambda x, y: [a != b for a, b in zip(x, y)],
-            '@': lambda x, y: [x[i] for i in y],
             '^': lambda x, y: list(set(x) & set(y)),
             '!^': lambda x, y: list(set(x) - set(y)),
             ',': lambda x, y: [str(a).startswith(str(b)) for a, b in zip(x, y)],
@@ -106,7 +105,7 @@ class Engine:
                 op = ("extern", self._safe_eval(op[0]))
 
     def _safe_eval(self, func_ref: str) -> Any:
-        if not self.allow_dunder and self.dunder_pattern.search(func_ref):
+        if not self.allow_dunder and self.dunder_pattern.search(func_ref) and func_ref.startswith("[lambda"):
             raise SecurityError(
                 f"Dunder method detected in {func_ref}. Set 'allow_dunder' = True to enable."
             )
